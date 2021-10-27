@@ -145,4 +145,4 @@ def update_graph_live(n):
 
 
 if __name__ == '__main__':
-    app.server.run(host='127.0.0.1', port=1080, debug=False, threaded=True)
+    app.server.run(debug=False, threaded=True)
