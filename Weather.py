@@ -19,7 +19,7 @@ GRAPH_INTERVAL = os.environ.get("GRAPH_INTERVAL", 1000*10)
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP],
                 meta_tags=[{'name': 'viewport', 'content': 'width=device-width, initial-scale=1.0'}])
 
-app.title = 'Denton Weather'
+app.title = 'Weather'
 
 
 app_color = {"graph_bg": "#082255", "graph_line": "#007ACE"}
