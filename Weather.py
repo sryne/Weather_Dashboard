@@ -7,33 +7,31 @@ import dash
 from dash import dcc
 from dash import html
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 
 USER = os.environ.get('DB_USER')
 PASS = os.environ.get('DB_PASS')
 HOST = os.environ.get('DB_HOST')
 PORT = os.environ.get('DB_PORT')
 
-GRAPH_INTERVAL = os.environ.get("GRAPH_INTERVAL", 1000*10)
+GRAPH_INTERVAL = os.environ.get("GRAPH_INTERVAL", 1000 * 10)
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP],
                 meta_tags=[{'name': 'viewport', 'content': 'width=device-width, initial-scale=1.0'}])
 
 app.title = 'Weather'
 
-
 app_color = {"graph_bg": "#082255", "graph_line": "#007ACE"}
 
 app.layout = html.Div(
     [
-        # header
         html.Div(
             [
                 html.Div(
                     [
                         html.H4("Weather Streaming", className="app__header__title"),
                         html.P(
-                            "This app continually queries a SQL database and displays live charts of weather data",
+                            "This app continually queries Open Weather Map API and scrapes another weather website",
                             className="app__header__title--grey",
                         ),
                     ],
@@ -44,12 +42,53 @@ app.layout = html.Div(
         ),
         html.Div(
             [
-                # Weather graph
                 html.Div(
                     [
+
                         html.Div(
-                            [html.H6("Temperature (Degree F)", className="graph__title")]
+                            [
+                                dcc.Dropdown(
+                                    id='demo-dropdown',
+                                    options=[
+                                        {'label': 'Temperature', 'value': 'Temp'},
+                                        {'label': 'Humidity', 'value': 'Humid'},
+                                        {'label': 'Dew Point', 'value': 'Dew Point'},
+                                        {'label': 'Rainfall Rate', 'value': 'Rainfall Rate'},
+                                        {'label': 'Daily Rainfall', 'value': 'Rainfall'},
+                                        {'label': 'Pressure', 'value': 'Pressure'},
+                                    ],
+                                    value='Temp'
+                                ),
+                                html.Div(id='dd-output-container')
+                            ],
+                            className='slider '
                         ),
+
+                        html.Div(
+                            [
+                                html.Span('Current Time: ', id='live-time', className='graph__title'),
+                                html.Span('Current Status: ', id='live-status', className='graph__title'),
+                                html.Span('Current Temp: ', id='live-temp', className='graph__title'),
+                                html.Span('Current humid: ', id='live-humid', className='graph__title'),
+                            ],
+                            className='flex-box'
+                        ),
+                        html.Div(
+                            [
+                                html.Span('Current Dew Point: ', id='live-dew', className='graph__title'),
+                                html.Span('Current Rainfall Rate: ', id='live-rain-rate', className='graph__title'),
+                                html.Span('Daily Rainfall: ', id='live-rain', className='graph__title'),
+                                html.Span('Current Pressure: ', id='live-press', className='graph__title'),
+                            ],
+                            className='flex-box'
+                        ),
+
+                        dcc.Interval(
+                            id="interval-data",
+                            interval=int(GRAPH_INTERVAL),
+                            n_intervals=0,
+                        ),
+
                         dcc.Graph(
                             id="temp-graph",
                             figure=dict(
@@ -60,100 +99,13 @@ app.layout = html.Div(
                             ),
                         ),
                         dcc.Interval(
-                            id="interval-component",
+                            id="interval-fig",
                             interval=int(GRAPH_INTERVAL),
                             n_intervals=0,
                         ),
                     ],
-                    className="two-thirds column temp__container",
+                    className="three-thirds column temp__container",
                 ),
-                # html.Div(
-                #     [
-                #         # histogram
-                #         html.Div(
-                #             [
-                #                 html.Div(
-                #                     [
-                #                         html.H6(
-                #                             "WIND SPEED HISTOGRAM",
-                #                             className="graph__title",
-                #                         )
-                #                     ]
-                #                 ),
-                #                 html.Div(
-                #                     [
-                #                         dcc.Slider(
-                #                             id="bin-slider",
-                #                             min=1,
-                #                             max=60,
-                #                             step=1,
-                #                             value=20,
-                #                             updatemode="drag",
-                #                             marks={
-                #                                 20: {"label": "20"},
-                #                                 40: {"label": "40"},
-                #                                 60: {"label": "60"},
-                #                             },
-                #                         )
-                #                     ],
-                #                     className="slider",
-                #                 ),
-                #                 html.Div(
-                #                     [
-                #                         dcc.Checklist(
-                #                             id="bin-auto",
-                #                             options=[
-                #                                 {"label": "Auto", "value": "Auto"}
-                #                             ],
-                #                             value=["Auto"],
-                #                             inputClassName="auto__checkbox",
-                #                             labelClassName="auto__label",
-                #                         ),
-                #                         html.P(
-                #                             "# of Bins: Auto",
-                #                             id="bin-size",
-                #                             className="auto__p",
-                #                         ),
-                #                     ],
-                #                     className="auto__container",
-                #                 ),
-                #                 dcc.Graph(
-                #                     id="wind-histogram",
-                #                     figure=dict(
-                #                         layout=dict(
-                #                             plot_bgcolor=app_color["graph_bg"],
-                #                             paper_bgcolor=app_color["graph_bg"],
-                #                         )
-                #                     ),
-                #                 ),
-                #             ],
-                #             className="graph__container first",
-                #         ),
-                #         # wind direction
-                #         html.Div(
-                #             [
-                #                 html.Div(
-                #                     [
-                #                         html.H6(
-                #                             "WIND DIRECTION", className="graph__title"
-                #                         )
-                #                     ]
-                #                 ),
-                #                 dcc.Graph(
-                #                     id="wind-direction",
-                #                     figure=dict(
-                #                         layout=dict(
-                #                             plot_bgcolor=app_color["graph_bg"],
-                #                             paper_bgcolor=app_color["graph_bg"],
-                #                         )
-                #                     ),
-                #                 ),
-                #             ],
-                #             className="graph__container second",
-                #         ),
-                #     ],
-                #     className="one-third column histogram__direction",
-                # ),
             ],
             className="app__content",
         ),
@@ -170,40 +122,47 @@ def data_pull():
     chart_cutoff = "'" + (datetime.datetime.now() - pd.Timedelta(days=7)).strftime('%Y/%m/%d %H:%M:%S') + "'"
 
     # Pull all data, within look back timeframe, into dataframe
-    sql = 'SELECT "Time", "Temp" FROM weather_data WHERE weather_data."Time" > ' + chart_cutoff + ' ORDER BY weather_data."Time"'
+    sql = 'SELECT * FROM weather_data WHERE weather_data."Time" > ' + chart_cutoff + ' ORDER BY weather_data."Time"'
     df = pd.read_sql(sql, conn)
     df['Time'] = pd.to_datetime(df['Time'])
     return df
 
 
-# # Header data updates
-# @app.callback(Output('live-update-text', 'children'),
-#               Input('interval-component', 'n_intervals'))
-# def update_metrics(n):
-#     weather = data_pull()
-#
-#     time = 'Time: ' + str(weather['Time'].dt.strftime('%H:%M:%S').values[0])
-#     status = 'Status: ' + str(weather['Status'].values[0])
-#     temp = 'Temperature: ' + str(weather['Temp'].values[0]) + ' deg F'
-#     humid = 'Humidity: ' + str(weather['Humid'].values[0]) + '%'
-#     dew = 'Dew Point: ' + str(round(weather['Dew Point'], 2).values[0]) + ' deg F'
-#     rain_rate = 'Rainfall Rate: ' + str(weather['Rainfall Rate'].values[0]) + '" per hour'
-#     rain = 'Today' + "'" + 's Rainfall: ' + str(round(float(weather['Rainfall']), 2)) + '"'
-#     press = 'Pressure: ' + str(round(weather['Pressure'], 2).values[0]) + ' inHg'
-#
-#     return time
+@app.callback(Output('live-time', 'children'),
+              Output('live-status', 'children'),
+              Output('live-temp', 'children'),
+              Output('live-humid', 'children'),
+              Output('live-dew', 'children'),
+              Output('live-rain-rate', 'children'),
+              Output('live-rain', 'children'),
+              Output('live-press', 'children'),
+              Input('interval-data', 'n_intervals'))
+def current_data(n):
+    weather = data_pull()
+    time = 'Current Time: ' + str(weather['Time'].dt.strftime('%H:%M:%S').values[-1])
+    status = 'Status: ' + str(weather['Status'].values[-1])
+    temp = 'Temperature: ' + str(weather['Temp'].values[-1]) + ' deg F'
+    humid = 'Humidity: ' + str(weather['Humid'].values[-1]) + '%'
+    dew = 'Dew Point: ' + str(round(weather['Dew Point'], 2).values[-1]) + ' deg F'
+    rain_rate = 'Rainfall Rate: ' + str(weather['Rainfall Rate'].values[-1]) + '" per hour'
+    rain = 'Today' + "'" + 's Rainfall: ' + str(weather['Rainfall'].values[-1]) + '"'
+    press = 'Pressure: ' + str(round(weather['Pressure'], 2).values[-1]) + ' inHg'
+    return time, status, temp, humid, dew, rain_rate, rain, press
 
 
-# Quad chart update
 @app.callback(Output('temp-graph', 'figure'),
-              Input('interval-component', 'n_intervals'))
-def update_graph_live(n):
+              [
+                  Input('interval-fig', 'n_intervals'),
+                  Input('demo-dropdown', 'value')
+              ]
+              )
+def update_graph_live(n, value):
     weather = data_pull()
 
     trace = dict(
         type="scatter",
         x=weather['Time'],
-        y=weather["Temp"],
+        y=weather[value],
         line={"color": "#42C4F7"},
         hoverinfo="skip",
         mode="lines",
@@ -226,7 +185,7 @@ def update_graph_live(n):
             "fixedrange": True,
             "zeroline": False,
             "gridcolor": app_color["graph_line"],
-            'title': 'Temperature',
+            'title': value,
         },
     )
 
@@ -234,4 +193,4 @@ def update_graph_live(n):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, threaded=True)
+    app.run_server(host='0.0.0.0', port=8050, debug=True, threaded=True)
