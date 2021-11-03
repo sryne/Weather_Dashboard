@@ -7,7 +7,8 @@ import dash
 from dash import dcc
 from dash import html
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output
+from datetime import date
 
 USER = os.environ.get('DB_USER')
 PASS = os.environ.get('DB_PASS')
@@ -23,6 +24,7 @@ app.title = 'Weather'
 
 app_color = {"graph_bg": "#082255", "graph_line": "#007ACE"}
 
+
 app.layout = html.Div(
     [
         html.Div(
@@ -30,25 +32,16 @@ app.layout = html.Div(
                 html.Div(
                     [
                         html.H4("Weather Streaming", className="app__header__title"),
+
                         html.P(
                             "This app continually queries Open Weather Map API and scrapes another weather website",
                             className="app__header__title--grey",
                         ),
-                    ],
-                    className="app__header__desc",
-                ),
-            ],
-            className="app__header",
-        ),
-        html.Div(
-            [
-                html.Div(
-                    [
 
                         html.Div(
                             [
                                 dcc.Dropdown(
-                                    id='demo-dropdown',
+                                    id='dropdown',
                                     options=[
                                         {'label': 'Temperature', 'value': 'Temp'},
                                         {'label': 'Humidity', 'value': 'Humid'},
@@ -57,30 +50,46 @@ app.layout = html.Div(
                                         {'label': 'Daily Rainfall', 'value': 'Rainfall'},
                                         {'label': 'Pressure', 'value': 'Pressure'},
                                     ],
-                                    value='Temp'
+                                    value='Temp',
+                                    clearable=False,
+                                    searchable=False,
+                                    style={'color': 'black'}
                                 ),
-                                html.Div(id='dd-output-container')
+                                html.Div(id='dd-output-container'),
+
+                                dcc.DatePickerSingle(
+                                    id='my-date-picker-single',
+                                    min_date_allowed=date(2021, 10, 25),
+                                    max_date_allowed=(datetime.datetime.now() - pd.Timedelta(days=1)),
+                                    date=(datetime.datetime.now() - pd.Timedelta(days=7)).strftime('%Y/%m/%d %H:%M:%S')
+                                ),
+                                html.Div(id='output-container-date-picker-single')
                             ],
-                            className='slider '
+                            className='dropdown',
                         ),
+                    ],
+                    className="app__header__desc",
+                ),
+            ],
+            className="app__header",
+        ),
+
+        html.Div(
+            [
+                html.Div(
+                    [
 
                         html.Div(
                             [
-                                html.Span('Current Time: ', id='live-time', className='graph__title'),
-                                html.Span('Current Status: ', id='live-status', className='graph__title'),
-                                html.Span('Current Temp: ', id='live-temp', className='graph__title'),
-                                html.Span('Current humid: ', id='live-humid', className='graph__title'),
+                                html.P('Current Time', id='live-time', className='graph__title'),
+                                html.P('Current Status', id='live-status', className='graph__title'),
+                                html.P('Current Temp', id='live-temp', className='graph__title'),
+                                html.P('Current humid', id='live-humid', className='graph__title'),
+                                html.P('Current Dew Point', id='live-dew', className='graph__title'),
+                                html.P('Current Rainfall Rate', id='live-rain-rate', className='graph__title'),
+                                html.P('Daily Rainfall', id='live-rain', className='graph__title'),
+                                html.P('Current Pressure', id='live-press', className='graph__title'),
                             ],
-                            className='flex-box'
-                        ),
-                        html.Div(
-                            [
-                                html.Span('Current Dew Point: ', id='live-dew', className='graph__title'),
-                                html.Span('Current Rainfall Rate: ', id='live-rain-rate', className='graph__title'),
-                                html.Span('Daily Rainfall: ', id='live-rain', className='graph__title'),
-                                html.Span('Current Pressure: ', id='live-press', className='graph__title'),
-                            ],
-                            className='flex-box'
                         ),
 
                         dcc.Interval(
@@ -114,15 +123,15 @@ app.layout = html.Div(
 )
 
 
-def data_pull():
+def data_pull(cutoff):
     # Connect to SQL database
     conn = psycopg2.connect(database='Weather', user=USER, password=PASS, host=HOST, port=PORT)
 
     # Define plot start date
-    chart_cutoff = "'" + (datetime.datetime.now() - pd.Timedelta(days=7)).strftime('%Y/%m/%d %H:%M:%S') + "'"
+    cutoff = "'" + (pd.to_datetime(cutoff).strftime('%Y/%m/%d %H:%M:%S')) + "'"
 
     # Pull all data, within look back timeframe, into dataframe
-    sql = 'SELECT * FROM weather_data WHERE weather_data."Time" > ' + chart_cutoff + ' ORDER BY weather_data."Time"'
+    sql = 'SELECT * FROM weather_data WHERE weather_data."Time" > ' + cutoff + ' ORDER BY weather_data."Time"'
     df = pd.read_sql(sql, conn)
     df['Time'] = pd.to_datetime(df['Time'])
     return df
@@ -136,9 +145,13 @@ def data_pull():
               Output('live-rain-rate', 'children'),
               Output('live-rain', 'children'),
               Output('live-press', 'children'),
-              Input('interval-data', 'n_intervals'))
-def current_data(n):
-    weather = data_pull()
+              [
+                  Input('interval-data', 'n_intervals'),
+                  Input('my-date-picker-single', 'date')
+              ]
+              )
+def current_data(n, date):
+    weather = data_pull(cutoff=date)
     time = 'Current Time: ' + str(weather['Time'].dt.strftime('%H:%M:%S').values[-1])
     status = 'Status: ' + str(weather['Status'].values[-1])
     temp = 'Temperature: ' + str(weather['Temp'].values[-1]) + ' deg F'
@@ -153,11 +166,12 @@ def current_data(n):
 @app.callback(Output('temp-graph', 'figure'),
               [
                   Input('interval-fig', 'n_intervals'),
-                  Input('demo-dropdown', 'value')
+                  Input('dropdown', 'value'),
+                  Input('my-date-picker-single', 'date')
               ]
               )
-def update_graph_live(n, value):
-    weather = data_pull()
+def update_graph_live(n, value, date):
+    weather = data_pull(cutoff=date)
 
     trace = dict(
         type="scatter",
@@ -172,7 +186,8 @@ def update_graph_live(n, value):
         plot_bgcolor=app_color["graph_bg"],
         paper_bgcolor=app_color["graph_bg"],
         font={"color": "#fff"},
-        height=700,
+        height=400,
+        margin=dict(l=75, r=20, t=20, b=75),
         xaxis={
             "showline": True,
             "zeroline": False,
@@ -193,4 +208,4 @@ def update_graph_live(n, value):
 
 
 if __name__ == '__main__':
-    app.run_server(host='0.0.0.0', port=8050, debug=True, threaded=True)
+    app.run_server(host='0.0.0.0', port=8080, debug=False, threaded=True)
