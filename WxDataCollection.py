@@ -20,10 +20,6 @@ CITY = os.environ.get('CITY')
 RAIN_SITE = os.environ.get('RAIN_SITE')
 
 # Establish connection with API
-# SID = os.environ.get('TWILLIO_SID')
-# TOK = os.environ.get('TWILLIO_TOK')
-# TO = os.environ.get('TWILLIO_TO')
-# FROM = os.environ.get('TWILLIO_FROM')
 KEY = os.environ.get('OWM_API_KEY')
 owm = OWM(KEY)
 mgr = owm.weather_manager()
@@ -48,12 +44,16 @@ while True:
             rain_rate = 0
 
         # Scrape rainfall data
-        response = requests.get(RAIN_SITE,
-                                headers={"User-Agent": "Mozilla/5.0 (Linux; Android 8.0.0; SM-G960F Build/R16NW) "
-                                                       "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.84 "
-                                                       "Mobile Safari/537.36"})
-        soup = BeautifulSoup(response.text, 'html.parser')
-        rainfall = soup.find('div', id='homeStats').find_all('p')[5].text.split('"')[0]
+        try:
+            response = requests.get(RAIN_SITE,
+                                    headers={"User-Agent": "Mozilla/5.0 (Linux; Android 8.0.0; SM-G960F Build/R16NW) "
+                                                           "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.84 "
+                                                           "Mobile Safari/537.36"})
+            soup = BeautifulSoup(response.text, 'html.parser')
+            rainfall = soup.find('div', id='homeStats').find_all('p')[5].text.split('"')[0]
+        except:
+            print('bs scraper could not contact site')
+            rainfall = 0
 
         df = pd.DataFrame({'Time': [t],
                            'Temp': [temp],
@@ -70,11 +70,3 @@ while True:
     except:
         t = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
         print('Warning! ' + str(t))
-        # try:
-        #     client = Client(SID, TOK)
-        #     client.messages.create(to=TO,
-        #                            from_=FROM,
-        #                            body="There has been a problem while scraping Wx data at " + str(t))
-        # except TwilioRestException as e:
-        #     print('Text Failed at ' + str(t) + ': ' + str(e))
-        #     continue
