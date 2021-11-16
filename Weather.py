@@ -1,11 +1,12 @@
 import os
-from datetime import datetime
 import datetime
 import psycopg2
 import pandas as pd
 import dash
-from dash import dcc
-from dash import html
+# from dash import dcc
+import dash_core_components as dcc  # this is needed for headless mode
+# from dash import html
+import dash_html_components as html  # this is needed for headless mode
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 from datetime import date
@@ -60,7 +61,9 @@ app.layout = html.Div(
                                 dcc.DatePickerSingle(
                                     id='my-date-picker-single',
                                     min_date_allowed=date(2021, 10, 25),
-                                    max_date_allowed=(datetime.datetime.now() - pd.Timedelta(days=1)),
+                                    max_date_allowed=date(datetime.datetime.today().year,
+                                                          datetime.datetime.today().month,
+                                                          datetime.datetime.today().day),
                                     date=(datetime.datetime.now() - pd.Timedelta(days=7)).strftime('%Y/%m/%d %H:%M:%S')
                                 ),
                                 html.Div(id='output-container-date-picker-single')
