@@ -11,10 +11,11 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 from datetime import date
 
-USER = os.environ.get('DB_USER')
-PASS = os.environ.get('DB_PASS')
-HOST = os.environ.get('DB_HOST')
-PORT = os.environ.get('DB_PORT')
+DATABASE_URL = os.environ['DATABASE_URL']
+# USER = os.environ.get('DB_USER')
+# PASS = os.environ.get('DB_PASS')
+# HOST = os.environ.get('DB_HOST')
+# PORT = os.environ.get('DB_PORT')
 
 GRAPH_INTERVAL = os.environ.get("GRAPH_INTERVAL", 1000 * 10)
 
@@ -130,8 +131,8 @@ app.layout = html.Div(
 
 def data_pull(cutoff):
     # Connect to SQL database
-    conn = psycopg2.connect(database='Weather', user=USER, password=PASS, host=HOST, port=PORT)
-
+    # conn = psycopg2.connect(database='Weather', user=USER, password=PASS, host=HOST, port=PORT)
+    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
     # Define plot start date
     cutoff = "'" + (pd.to_datetime(cutoff).strftime('%Y/%m/%d %H:%M:%S')) + "'"
 
