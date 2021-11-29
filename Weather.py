@@ -11,11 +11,11 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 from datetime import date
 
-DATABASE_URL = os.environ['DATABASE_URL']
-# USER = os.environ.get('DB_USER')
-# PASS = os.environ.get('DB_PASS')
-# HOST = os.environ.get('DB_HOST')
-# PORT = os.environ.get('DB_PORT')
+# DATABASE_URL = os.environ['DATABASE_URL']
+USER = os.environ.get('DB_USER')
+PASS = os.environ.get('DB_PASS')
+HOST = os.environ.get('DB_HOST')
+PORT = os.environ.get('DB_PORT')
 
 GRAPH_INTERVAL = os.environ.get("GRAPH_INTERVAL", 1000 * 10)
 
@@ -27,6 +27,20 @@ server = app.server
 app.title = 'Weather'
 
 app_color = {"graph_bg": "#082255", "graph_line": "#007ACE"}
+
+
+def data_pull(cutoff):
+    # Connect to SQL database
+    conn = psycopg2.connect(database='Weather', user=USER, password=PASS, host=HOST, port=PORT)
+    # conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+    # Define plot start date
+    cutoff = "'" + (pd.to_datetime(cutoff).strftime('%Y/%m/%d %H:%M:%S')) + "'"
+
+    # Pull all data, within look back timeframe, into dataframe
+    sql = 'SELECT * FROM weather_data WHERE weather_data."Time" > ' + cutoff + ' ORDER BY weather_data."Time"'
+    df = pd.read_sql(sql, conn)
+    df['Time'] = pd.to_datetime(df['Time'])
+    return df
 
 
 app.layout = html.Div(
@@ -61,15 +75,12 @@ app.layout = html.Div(
                                 ),
                                 html.Div(id='dd-output-container'),
 
-                                dcc.DatePickerSingle(
-                                    id='my-date-picker-single',
-                                    min_date_allowed=date(2021, 10, 25),
-                                    max_date_allowed=date(datetime.datetime.today().year,
-                                                          datetime.datetime.today().month,
-                                                          datetime.datetime.today().day),
-                                    date=(datetime.datetime.now() - pd.Timedelta(days=7)).strftime('%Y/%m/%d %H:%M:%S')
-                                ),
-                                html.Div(id='output-container-date-picker-single')
+                                html.Div(id='live-date'),
+                                dcc.Interval(
+                                    id="interval-date",
+                                    interval=int(GRAPH_INTERVAL),
+                                    n_intervals=0,)
+
                             ],
                             className='dropdown',
                         ),
@@ -129,18 +140,20 @@ app.layout = html.Div(
 )
 
 
-def data_pull(cutoff):
-    # Connect to SQL database
-    # conn = psycopg2.connect(database='Weather', user=USER, password=PASS, host=HOST, port=PORT)
-    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-    # Define plot start date
-    cutoff = "'" + (pd.to_datetime(cutoff).strftime('%Y/%m/%d %H:%M:%S')) + "'"
-
-    # Pull all data, within look back timeframe, into dataframe
-    sql = 'SELECT * FROM weather_data WHERE weather_data."Time" > ' + cutoff + ' ORDER BY weather_data."Time"'
-    df = pd.read_sql(sql, conn)
-    df['Time'] = pd.to_datetime(df['Time'])
-    return df
+@app.callback(Output('live-date', 'children'),
+              Input('interval-date', 'n_intervals'))
+def layout(n):
+    return html.Div([
+        dcc.DatePickerSingle(
+            id='my-date-picker-single',
+            min_date_allowed=date(2021, 10, 25),
+            max_date_allowed=date(datetime.datetime.today().year,
+                                  datetime.datetime.today().month,
+                                  datetime.datetime.today().day),
+            date=(datetime.datetime.now() - pd.Timedelta(days=7)).strftime('%Y/%m/%d %H:%M:%S')
+        ),
+        html.Div(id='output-container-date-picker-single'),
+    ])
 
 
 @app.callback(Output('live-time', 'children'),
